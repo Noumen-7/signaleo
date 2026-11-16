@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ReportType {
+  HARCELEMENT_PHYSIQUE
+  HARCELEMENT_VERBAL
+  CYBERHARCELEMENT
+  INTIMIDATION
+  AUTRE
+}
+
+// Ordre de déclaration = ordre de tri (URGENTE en dernier => tri desc = urgents d'abord)
+enum Gravity {
+  FAIBLE
+  MOYENNE
+  ELEVEE
+  URGENTE
+}
+
+enum ReportStatus {
+  NOUVEAU
+  EN_COURS
+  TRAITE
+  CLOS
+}
+
+enum StaffRole {
+  RESPONSABLE
+  ADMIN
+}
+
+enum MessageAuthor {
+  ELEVE
+  PARENT
+  STAFF
+}
+
+// Origine déclarée au dépôt — pas une identité
+enum AuthorOrigin {
+  VICTIME
+  PARENT
+}
+
+// Aucune donnée d'identité, aucune IP, aucun identifiant d'appareil.
+model Report {
+  id               String       @id @default(uuid())
+  trackingCodeHash String       @unique
+  type             ReportType
+  authorOrigin     AuthorOrigin @default(VICTIME)
+  gravity          Gravity      @default(MOYENNE)
+  status           ReportStatus @default(NOUVEAU)
+  incidentDate     DateTime
+  // Champs chiffrés AES-256-GCM
+  lieuEnc          String
+  personnesEnc     String
+  descriptionEnc   String
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  messages         Message[]
+  internalNotes    InternalNote[]
+  attachments      Attachment[]
+  auditLogs        AuditLog[]
+
+  @@index([status])
+  @@index([type])
+  @@index([gravity])
+  @@index([createdAt])
+}
+
+/// Pièce jointe image — contenu chiffré sur disque, métadonnées en base
+model Attachment {
+  id           String   @id @default(uuid())
+  reportId     String
+  report       Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  mimeType     String
+  sizeBytes    Int
+  storageName  String
+  nameEnc      String
+  createdAt    DateTime @default(now())
+
+  @@index([reportId])
+}
+
+model Message {
+  id         String        @id @default(uuid())
+  reportId   String
+  report     Report        @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  author     MessageAuthor
+  contentEnc String
+  createdAt  DateTime      @default(now())
+
+  @@index([reportId])
+}
+
+/// Notes internes — jamais exposées au suivi public
+model InternalNote {
+  id         String    @id @default(uuid())
+  reportId   String
+  report     Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  staffId    String
+  staff      StaffUser @relation(fields: [staffId], references: [id])
+  contentEnc String
+  createdAt  DateTime  @default(now())
+
+  @@index([reportId])
+}
+
+model StaffUser {
+  id             String         @id @default(uuid())
+  email          String         @unique
+  passwordHash   String
+  displayName    String
+  role           StaffRole      @default(RESPONSABLE)
+  /// Compte actif — désactivé = connexion refusée
+  active         Boolean        @default(true)
+  /// Secret TOTP base32 — null = 2FA non activée
+  totpSecret     String?
+  failedAttempts Int            @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime       @default(now())
+  auditLogs      AuditLog[]
+  internalNotes  InternalNote[]
+}
+
+model AuditLog {
+  id        String     @id @default(uuid())
+  staffId   String?
+  staff     StaffUser? @relation(fields: [staffId], references: [id])
+  reportId  String?
+  report    Report?    @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  action    String
+  details   String?
+  createdAt DateTime   @default(now())
+
+  @@index([createdAt])
+}
