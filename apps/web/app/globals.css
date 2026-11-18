@@ -404,6 +404,35 @@ h2 { font-size: clamp(1.2rem, 3vw, 1.45rem); }
 }
 .confirm-actions .btn { min-width: 7.5rem; }
 
+.attach-list { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; }
+.attach-preview {
+  width: min(100%, 920px);
+  max-height: min(92dvh, 900px);
+  overflow: auto;
+  background: var(--white);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+  animation: authEnter .28s cubic-bezier(.22, 1, .36, 1) both;
+}
+.attach-preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  margin-bottom: .85rem;
+}
+.attach-preview-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(75dvh, 780px);
+  object-fit: contain;
+  border-radius: 12px;
+  background: #0f1a14;
+}
+
 .staff-nav {
   display: flex;
   flex-wrap: wrap;

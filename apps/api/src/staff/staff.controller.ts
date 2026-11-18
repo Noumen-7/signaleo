@@ -9,11 +9,9 @@ import {
   Post,
   Query,
   Req,
-  Res,
   StreamableFile,
   UseGuards,
 } from '@nestjs/common';
-import type { Response } from 'express';
 import { JwtGuard, Roles, StaffPayload } from '../auth/jwt.guard';
 import { StaffService } from './staff.service';
 import {
@@ -53,16 +51,15 @@ export class StaffController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('attachmentId', ParseUUIDPipe) attachmentId: string,
     @Req() req: StaffRequest,
-    @Res({ passthrough: true }) res: Response,
   ) {
     const file = await this.staff.getAttachment(id, attachmentId, req.staff.sub);
     if (!file) throw new NotFoundException();
-    res.set({
-      'Content-Type': file.mimeType,
-      'Content-Disposition': `inline; filename="${encodeURIComponent(file.name)}"`,
-      'Cache-Control': 'no-store',
+    const safeName = file.name.replace(/[\r\n"]/g, '_') || 'image';
+    return new StreamableFile(Buffer.from(file.buffer), {
+      type: file.mimeType,
+      disposition: `inline; filename="${safeName}"; filename*=UTF-8''${encodeURIComponent(file.name)}`,
+      length: file.buffer.length,
     });
-    return new StreamableFile(file.buffer);
   }
 
   @Patch('reports/:id/status')

@@ -45,6 +45,8 @@ export default function ReportDetail() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
+  const [loadingAtt, setLoadingAtt] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -67,6 +69,12 @@ export default function ReportDetail() {
     }
     load();
   }, [user, load, router]);
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview.url);
+    };
+  }, [preview]);
 
   if (!user || user.role === 'ADMIN') return null;
 
@@ -105,20 +113,38 @@ export default function ReportDetail() {
   }
 
   async function openAttachment(attachmentId: string, name: string) {
+    setError(null);
+    setLoadingAtt(true);
     try {
-      const blob = await fetchBlob(`/staff/reports/${id}/attachments/${attachmentId}`);
+      const reportId = Array.isArray(id) ? id[0] : id;
+      const blob = await fetchBlob(`/staff/reports/${reportId}/attachments/${attachmentId}`);
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      a.download = name;
-      a.click();
-      URL.revokeObjectURL(url);
+      setPreview((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { url, name };
+      });
     } catch (err) {
       handleAuthError(err);
       setError((err as Error).message);
+    } finally {
+      setLoadingAtt(false);
     }
+  }
+
+  function closePreview() {
+    setPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev.url);
+      return null;
+    });
+  }
+
+  function downloadPreview() {
+    if (!preview) return;
+    const a = document.createElement('a');
+    a.href = preview.url;
+    a.download = preview.name || 'piece-jointe';
+    a.rel = 'noopener';
+    a.click();
   }
 
   async function sendNote(e: FormEvent) {
@@ -170,8 +196,13 @@ export default function ReportDetail() {
                 <ul className="attach-list">
                   {report.attachments.map((a) => (
                     <li key={a.id}>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => openAttachment(a.id, a.name)}>
-                        {a.name} ({Math.round(a.sizeBytes / 1024)} Ko)
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        disabled={loadingAtt}
+                        onClick={() => openAttachment(a.id, a.name)}
+                      >
+                        {loadingAtt ? 'Chargement…' : `${a.name} (${Math.round(a.sizeBytes / 1024)} Ko)`}
                       </button>
                     </li>
                   ))}
@@ -249,6 +280,32 @@ export default function ReportDetail() {
             </form>
           </div>
         </>
+      )}
+
+      {preview && (
+        <div className="confirm-overlay" role="presentation" onClick={closePreview}>
+          <div
+            className="attach-preview"
+            role="dialog"
+            aria-modal="true"
+            aria-label={preview.name}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="attach-preview-head">
+              <strong>{preview.name}</strong>
+              <div className="row">
+                <button type="button" className="btn btn-outline btn-sm" onClick={downloadPreview}>
+                  Télécharger
+                </button>
+                <button type="button" className="btn btn-sm" onClick={closePreview}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={preview.url} alt={preview.name} className="attach-preview-img" />
+          </div>
+        </div>
       )}
     </>
   );

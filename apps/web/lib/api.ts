@@ -75,12 +75,27 @@ export async function api<T>(
 export async function fetchBlob(path: string): Promise<Blob> {
   const headers: Record<string, string> = {};
   if (session.token) headers.Authorization = `Bearer ${session.token}`;
-  const res = await fetch(`${API_URL}${path}`, {
-    headers,
-    cache: 'no-store',
-    referrerPolicy: 'no-referrer',
-    credentials: 'omit',
-  });
-  if (!res.ok) throw new ApiError(res.status, 'Téléchargement impossible');
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      headers,
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+      credentials: 'omit',
+    });
+  } catch {
+    throw new ApiError(0, 'Serveur injoignable. Réessayez dans un instant.');
+  }
+  if (!res.ok) {
+    let msg = 'Téléchargement impossible';
+    try {
+      const data = await res.json();
+      const m = Array.isArray(data?.message) ? data.message.join(' · ') : data?.message;
+      if (m) msg = m;
+    } catch {
+      /* réponse binaire / vide */
+    }
+    throw new ApiError(res.status, msg);
+  }
   return res.blob();
 }
