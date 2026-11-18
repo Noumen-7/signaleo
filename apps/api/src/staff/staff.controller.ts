@@ -17,7 +17,6 @@ import type { Response } from 'express';
 import { JwtGuard, Roles, StaffPayload } from '../auth/jwt.guard';
 import { StaffService } from './staff.service';
 import {
-  CreateAccountDto,
   InternalNoteDto,
   ListReportsQuery,
   StaffMessageDto,
@@ -28,8 +27,8 @@ import {
 type StaffRequest = { staff: StaffPayload };
 
 /**
- * RESPONSABLE : accès complet aux signalements.
- * ADMIN : métadonnées + journal d'audit + comptes, jamais le contenu des dossiers.
+ * RESPONSABLE : signalements + proposition de comptes (en attente).
+ * ADMIN : validation / désactivation des comptes + journal — jamais les dossiers.
  */
 @Controller('staff')
 @UseGuards(JwtGuard)
@@ -37,7 +36,7 @@ export class StaffController {
   constructor(private readonly staff: StaffService) {}
 
   @Get('reports')
-  @Roles('RESPONSABLE', 'ADMIN')
+  @Roles('RESPONSABLE')
   list(@Query() q: ListReportsQuery) {
     return this.staff.list(q);
   }
@@ -97,7 +96,7 @@ export class StaffController {
   }
 
   @Get('audit')
-  @Roles('ADMIN', 'RESPONSABLE')
+  @Roles('ADMIN')
   audit() {
     return this.staff.auditLogs();
   }
@@ -108,12 +107,7 @@ export class StaffController {
     return this.staff.listAccounts();
   }
 
-  @Post('accounts')
-  @Roles('ADMIN')
-  createAccount(@Body() dto: CreateAccountDto, @Req() req: StaffRequest) {
-    return this.staff.createAccount(dto, req.staff.sub);
-  }
-
+  /** Admin valide, désactive ou réactive — sans jamais fixer le mot de passe. */
   @Patch('accounts/:id')
   @Roles('ADMIN')
   updateAccount(

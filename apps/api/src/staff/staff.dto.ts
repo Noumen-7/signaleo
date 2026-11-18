@@ -1,7 +1,6 @@
 import {
   IsBoolean,
   IsDateString,
-  IsEmail,
   IsIn,
   IsOptional,
   IsString,
@@ -52,36 +51,19 @@ export class InternalNoteDto {
   content: string;
 }
 
-export class CreateAccountDto {
-  @IsEmail()
-  email: string;
-
-  @IsString()
-  @MinLength(12)
-  @MaxLength(200)
-  password: string;
-
-  @IsString()
-  @MinLength(2)
-  @MaxLength(120)
-  displayName: string;
-
-  @IsIn(['RESPONSABLE', 'ADMIN'])
-  role: 'RESPONSABLE' | 'ADMIN';
-}
-
 export class UpdateAccountDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  /** true = valider un compte en attente (active + approvedAt) */
+  @IsOptional()
+  @IsBoolean()
+  approve?: boolean;
 
   @IsOptional()
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   displayName?: string;
-
-  @IsOptional()
-  @IsIn(['RESPONSABLE', 'ADMIN'])
-  role?: 'RESPONSABLE' | 'ADMIN';
 }

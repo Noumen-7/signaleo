@@ -36,17 +36,18 @@ npm run dev
 | Responsable | `responsable@ecole.local` | `SignalEo2026!` |
 | Administrateur | `nomena7nomcdi@gmail.com` | `azertyuiopqsdfghjklm` |
 
-Connexion sur `/responsable/login` : **e-mail + mot de passe** (minimum 12 caractères).  
-Pour un nouveau responsable : l’admin le crée sur `/responsable/comptes` et lui donne e-mail + mot de passe.
+Connexion sur `/responsable/login` : **e-mail + mot de passe** (minimum 12 caractères).
+
+**Comptes :** inscription uniquement sur `/responsable/login` (déconnecté). Une fois connecté, on ne crée plus de compte. L’**admin** valide / désactive / réactive avec confirmation — **sans voir le mot de passe**, **sans accès aux signalements**.
 
 ## Fonctionnalités
 
 - Dépôt anonyme (sans compte) et code de suivi unique  
 - Suivi + messagerie (élève ou parent via le même code)  
 - Pièce jointe image optionnelle (JPEG / PNG / WebP, max. 10 Mo)  
-- Espace personnel : filtres, urgents, traitement, notes internes  
-- Administrateur : audit, gestion des comptes (sans lecture des dossiers)  
-- Chiffrement des contenus sensibles ; session personnel conservée jusqu’à déconnexion ou expiration du jeton (8 h)  
+- Responsable : dossiers, filtres, urgents, traitement, notes
+- Admin technique : validation / désactivation des comptes (avec confirmation) + journal d’audit (aucun dossier)
+- Chiffrement des contenus sensibles ; session personnel jusqu’à déconnexion ou expiration du jeton (8 h)  
 
 ## Pages
 
@@ -56,9 +57,9 @@ Pour un nouveau responsable : l’admin le crée sur `/responsable/comptes` et l
 | `/deposer` | Formulaire de signalement |
 | `/suivi` | Suivi par code |
 | `/responsable/login` | Connexion |
-| `/responsable` | Tableau de bord |
+| `/responsable` | Tableau de bord (responsable) |
 | `/responsable/[id]` | Détail d’un dossier |
-| `/responsable/comptes` | Gestion des comptes (admin) |
+| `/responsable/comptes` | Validation des comptes (admin uniquement) |
 
 ## Sécurité (production)
 

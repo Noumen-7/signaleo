@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { StaffNav } from '@/components/StaffNav';
 import { api } from '@/lib/api';
 import { useStaff } from '@/lib/useStaff';
 import { GRAVITY_LABELS, ORIGIN_LABELS, STATUS_LABELS, TYPE_LABELS, fmtDate, fmtDateTime } from '@/lib/labels';
@@ -17,8 +18,6 @@ type Row = {
   messageCount: number;
 };
 
-type AuditRow = { id: string; action: string; reportId: string | null; details: string | null; staff: string | null; createdAt: string };
-
 const EMPTY = { type: '', gravity: '', status: '', from: '', to: '', sort: 'gravity', order: 'desc' };
 
 export default function Dashboard() {
@@ -28,8 +27,6 @@ export default function Dashboard() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [audit, setAudit] = useState<AuditRow[] | null>(null);
-
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -46,49 +43,27 @@ export default function Dashboard() {
   }, [filters]);
 
   useEffect(() => {
-    if (user) load();
-  }, [user, load]);
-
-  async function loadAudit() {
-    try {
-      setAudit(await api<AuditRow[]>('/staff/audit', { auth: true }));
-    } catch (err) {
-      handleAuthError(err);
-      setError((err as Error).message);
+    if (!user) return;
+    if (user.role === 'ADMIN') {
+      router.replace('/responsable/comptes');
+      return;
     }
-  }
+    load();
+  }, [user, load, router]);
 
   const set = (k: keyof typeof EMPTY) => (e: { target: { value: string } }) =>
     setFilters((f) => ({ ...f, [k]: e.target.value }));
 
   if (!user) return null;
-  const canRead = user.role === 'RESPONSABLE';
+  if (user.role === 'ADMIN') return null;
   const counts = rows.reduce<Record<string, number>>((a, r) => ((a[r.status] = (a[r.status] ?? 0) + 1), a), {});
 
   return (
     <>
-      <div className="row space-between" style={{ marginBottom: '1rem' }}>
-        <div>
-          <h1 style={{ marginBottom: 0 }}>Signalements</h1>
-          <span className="muted small">{user.name} · {user.role === 'ADMIN' ? 'Administrateur' : 'Responsable'}</span>
-        </div>
-        <div className="row">
-          {user.role === 'ADMIN' && (
-            <button className="btn btn-outline btn-sm" onClick={() => router.push('/responsable/comptes')}>
-              Comptes
-            </button>
-          )}
-          <button className="btn btn-outline btn-sm" onClick={loadAudit}>Journal d&apos;audit</button>
-          <button className="btn btn-outline btn-sm" onClick={logout}>Déconnexion</button>
-        </div>
+      <StaffNav user={user} onLogout={logout} />
+      <div style={{ marginBottom: '1rem' }}>
+        <h1 style={{ marginBottom: 0 }}>Signalements</h1>
       </div>
-
-      {!canRead && (
-        <div className="alert alert-info">
-          Rôle administrateur : vous voyez uniquement les métadonnées. Le contenu des signalements est
-          réservé aux responsables.
-        </div>
-      )}
 
       <div className="row" style={{ marginBottom: '1rem' }}>
         {Object.entries(STATUS_LABELS).map(([k, l]) => (
@@ -166,8 +141,8 @@ export default function Dashboard() {
               {rows.map((r) => (
                 <tr
                   key={r.id}
-                  className={`${canRead ? 'row-link' : ''} ${r.gravity === 'URGENTE' ? 'urgent' : ''}`}
-                  onClick={() => canRead && router.push(`/responsable/${r.id}`)}
+                  className={`row-link ${r.gravity === 'URGENTE' ? 'urgent' : ''}`}
+                  onClick={() => router.push(`/responsable/${r.id}`)}
                 >
                   <td><span className={`badge gr-${r.gravity}`}>{GRAVITY_LABELS[r.gravity]}</span></td>
                   <td>{TYPE_LABELS[r.type]}</td>
@@ -186,33 +161,6 @@ export default function Dashboard() {
         </div>
         {loading && <p className="muted small">Chargement…</p>}
       </div>
-
-      {audit && (
-        <div className="card">
-          <div className="row space-between">
-            <h2 style={{ margin: 0 }}>Journal d&apos;audit (200 dernières actions)</h2>
-            <button className="btn btn-outline btn-sm" onClick={() => setAudit(null)}>Fermer</button>
-          </div>
-          <div className="table-wrap" style={{ marginTop: '1rem' }}>
-            <table>
-              <thead>
-                <tr><th>Date</th><th>Personnel</th><th>Action</th><th>Signalement</th><th>Détails</th></tr>
-              </thead>
-              <tbody>
-                {audit.map((a) => (
-                  <tr key={a.id}>
-                    <td>{fmtDateTime(a.createdAt)}</td>
-                    <td>{a.staff ?? '—'}</td>
-                    <td>{a.action}</td>
-                    <td className="small">{a.reportId ? a.reportId.slice(0, 8) : '—'}</td>
-                    <td>{a.details ?? ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </>
   );
 }

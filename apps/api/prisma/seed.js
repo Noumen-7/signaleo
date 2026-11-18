@@ -12,6 +12,7 @@ async function upsertStaff(email, password, displayName, role) {
     throw new Error(`Mot de passe trop court pour ${email} (min ${MIN_PASSWORD_LENGTH})`);
   }
   const passwordHash = await bcrypt.hash(password, 12);
+  const now = new Date();
   await prisma.staffUser.upsert({
     where: { email },
     update: {
@@ -20,10 +21,19 @@ async function upsertStaff(email, password, displayName, role) {
       role,
       totpSecret: null,
       active: true,
+      approvedAt: now,
       failedAttempts: 0,
       lockedUntil: null,
     },
-    create: { email, passwordHash, displayName, role, totpSecret: null, active: true },
+    create: {
+      email,
+      passwordHash,
+      displayName,
+      role,
+      totpSecret: null,
+      active: true,
+      approvedAt: now,
+    },
   });
   console.log(`  ✔ ${role.padEnd(11)} ${email}`);
 }

@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { StaffNav } from '@/components/StaffNav';
 import { api, fetchBlob } from '@/lib/api';
 import { useStaff } from '@/lib/useStaff';
 import {
@@ -34,7 +35,8 @@ type Detail = {
 
 export default function ReportDetail() {
   const { id } = useParams<{ id: string }>();
-  const { user, handleAuthError } = useStaff();
+  const router = useRouter();
+  const { user, logout, handleAuthError } = useStaff();
   const [report, setReport] = useState<Detail | null>(null);
   const [status, setStatus] = useState('');
   const [gravity, setGravity] = useState('');
@@ -58,8 +60,15 @@ export default function ReportDetail() {
   }, [id]);
 
   useEffect(() => {
-    if (user) load();
-  }, [user, load]);
+    if (!user) return;
+    if (user.role === 'ADMIN') {
+      router.replace('/responsable/comptes');
+      return;
+    }
+    load();
+  }, [user, load, router]);
+
+  if (!user || user.role === 'ADMIN') return null;
 
   async function saveStatus(e: FormEvent) {
     e.preventDefault();
@@ -130,10 +139,9 @@ export default function ReportDetail() {
     }
   }
 
-  if (!user) return null;
-
   return (
     <>
+      <StaffNav user={user} onLogout={logout} />
       <p><Link href="/responsable">← Retour à la liste</Link></p>
       {error && <div className="alert alert-error">{error}</div>}
       {!report && !error && <p className="muted">Chargement…</p>}

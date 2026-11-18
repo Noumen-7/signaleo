@@ -1,18 +1,10 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../common/prisma.service';
 import { CryptoService } from '../common/crypto.service';
 import { AuditService } from '../common/audit.service';
 import { StorageService } from '../common/storage.service';
-import { CreateAccountDto, ListReportsQuery, UpdateAccountDto, UpdateStatusDto } from './staff.dto';
-
-const MIN_PASSWORD_LENGTH = 12;
+import { ListReportsQuery, UpdateAccountDto, UpdateStatusDto } from './staff.dto';
 
 @Injectable()
 export class StaffService {
@@ -177,46 +169,21 @@ export class StaffService {
     }));
   }
 
-  /** Liste des comptes (admin) */
+  /** Liste des comptes (responsable + admin) — jamais les mots de passe */
   async listAccounts() {
     return this.prisma.staffUser.findMany({
-      orderBy: { createdAt: 'asc' },
+      orderBy: [{ approvedAt: 'asc' }, { createdAt: 'asc' }],
       select: {
         id: true,
         email: true,
         displayName: true,
         role: true,
         active: true,
+        approvedAt: true,
         createdAt: true,
         lockedUntil: true,
       },
     });
-  }
-
-  async createAccount(dto: CreateAccountDto, adminId: string) {
-    if (dto.password.length < MIN_PASSWORD_LENGTH) {
-      throw new BadRequestException(`Mot de passe : minimum ${MIN_PASSWORD_LENGTH} caractères`);
-    }
-    const email = dto.email.toLowerCase().trim();
-    const exists = await this.prisma.staffUser.findUnique({ where: { email } });
-    if (exists) throw new ConflictException('Cet e-mail est déjà utilisé');
-    const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = await this.prisma.staffUser.create({
-      data: {
-        email,
-        passwordHash,
-        displayName: dto.displayName.trim(),
-        role: dto.role,
-        totpSecret: null,
-        active: true,
-      },
-      select: { id: true, email: true, displayName: true, role: true, active: true, createdAt: true },
-    });
-    await this.audit.log('ACCOUNT_CREATE', {
-      staffId: adminId,
-      details: `${user.email} (${user.role})`,
-    });
-    return user;
   }
 
   async updateAccount(id: string, dto: UpdateAccountDto, adminId: string) {
@@ -225,18 +192,41 @@ export class StaffService {
     if (id === adminId && dto.active === false) {
       throw new BadRequestException('Vous ne pouvez pas désactiver votre propre compte');
     }
+
+    const data: Prisma.StaffUserUpdateInput = {};
+    if (dto.displayName) data.displayName = dto.displayName.trim();
+
+    if (dto.approve === true) {
+      data.active = true;
+      data.approvedAt = user.approvedAt ?? new Date();
+    } else if (dto.active === true) {
+      if (!user.approvedAt) {
+        throw new BadRequestException('Validez d’abord ce compte (approbation admin)');
+      }
+      data.active = true;
+    } else if (dto.active === false) {
+      data.active = false;
+    }
+
+    if (Object.keys(data).length === 0) {
+      throw new BadRequestException('Aucune modification');
+    }
+
     const updated = await this.prisma.staffUser.update({
       where: { id },
-      data: {
-        ...(dto.active !== undefined ? { active: dto.active } : {}),
-        ...(dto.displayName ? { displayName: dto.displayName.trim() } : {}),
-        ...(dto.role ? { role: dto.role } : {}),
+      data,
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        role: true,
+        active: true,
+        approvedAt: true,
       },
-      select: { id: true, email: true, displayName: true, role: true, active: true },
     });
-    await this.audit.log('ACCOUNT_UPDATE', {
+    await this.audit.log(dto.approve ? 'ACCOUNT_APPROVE' : 'ACCOUNT_UPDATE', {
       staffId: adminId,
-      details: `${updated.email} active=${updated.active}`,
+      details: `${updated.email} active=${updated.active} approved=${!!updated.approvedAt}`,
     });
     return updated;
   }

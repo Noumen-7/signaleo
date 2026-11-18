@@ -117,13 +117,16 @@ model StaffUser {
   passwordHash   String
   displayName    String
   role           StaffRole      @default(RESPONSABLE)
-  /// Compte actif — désactivé = connexion refusée
-  active         Boolean        @default(true)
+  /// Connexion autorisée uniquement si active = true
+  active         Boolean        @default(false)
+  /// null = en attente de validation admin ; renseigné à la validation
+  approvedAt     DateTime?
   /// Secret TOTP base32 — null = 2FA non activée
   totpSecret     String?
   failedAttempts Int            @default(0)
   lockedUntil    DateTime?
   createdAt      DateTime       @default(now())
+  createdById    String?
   auditLogs      AuditLog[]
   internalNotes  InternalNote[]
 }
