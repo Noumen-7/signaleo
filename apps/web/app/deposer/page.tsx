@@ -8,6 +8,7 @@ import { GRAVITY_LABELS, ORIGIN_LABELS, TYPE_LABELS } from '@/lib/labels';
 const today = () => new Date().toISOString().slice(0, 10);
 const MAX_FILE = 10 * 1024 * 1024;
 
+// Formulaire de signalement anonyme
 export default function DeposerPage() {
   const [form, setForm] = useState({
     type: '',
