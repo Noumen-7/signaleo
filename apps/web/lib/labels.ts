@@ -33,10 +33,11 @@ export const AUTHOR_LABELS: Record<string, string> = {
   STAFF: 'Établissement',
 };
 
-/** Origine déclarée au dépôt (victime ou parent) */
+/** Origine déclarée au dépôt (victime, parent ou témoin) */
 export const ORIGIN_LABELS: Record<string, string> = {
   VICTIME: 'Victime',
   PARENT: 'Parent',
+  TEMOIN: 'Témoin',
 };
 
 export const fmtDate = (d: string) =>

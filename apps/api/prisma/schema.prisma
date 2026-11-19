@@ -45,6 +45,7 @@ enum MessageAuthor {
 enum AuthorOrigin {
   VICTIME
   PARENT
+  TEMOIN
 }
 
 // Aucune donnée d'identité, aucune IP, aucun identifiant d'appareil.

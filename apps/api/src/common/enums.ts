@@ -7,7 +7,7 @@ export const REPORT_TYPES = [
 ] as const;
 export const GRAVITIES = ['FAIBLE', 'MOYENNE', 'ELEVEE', 'URGENTE'] as const;
 export const STATUSES = ['NOUVEAU', 'EN_COURS', 'TRAITE', 'CLOS'] as const;
-export const AUTHOR_ORIGINS = ['VICTIME', 'PARENT'] as const;
+export const AUTHOR_ORIGINS = ['VICTIME', 'PARENT', 'TEMOIN'] as const;
 
 export type ReportTypeT = (typeof REPORT_TYPES)[number];
 export type GravityT = (typeof GRAVITIES)[number];
